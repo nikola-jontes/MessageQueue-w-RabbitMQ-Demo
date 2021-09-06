@@ -3,7 +3,9 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
+using RabbitMQ.Client;
 
 namespace RabbitMQ.Consumer
 {
@@ -19,6 +21,9 @@ namespace RabbitMQ.Consumer
                 .ConfigureServices((hostContext, services) =>
                 {
                     services.AddHostedService<Worker>();
+
+                    services.AddSingleton<ConnectionFactory>(_ => new ConnectionFactory
+                        {Uri = new Uri("amqp://guest:guest@localhost:5672")});
                 });
     }
 }
