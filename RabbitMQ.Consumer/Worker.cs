@@ -14,10 +14,18 @@ namespace RabbitMQ.Consumer
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
+        private readonly IConnection _connection;
 
         public Worker(ILogger<Worker> logger)
         {
             _logger = logger;
+            
+            var factory = new ConnectionFactory
+            {
+                Uri = new Uri("amqp://guest:guest@localhost:5672")
+            };
+
+            _connection = factory.CreateConnection();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -25,22 +33,20 @@ namespace RabbitMQ.Consumer
             while (!stoppingToken.IsCancellationRequested)
             {
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-                await Task.Delay(5*1000, stoppingToken);
-                ConsumeMessage();
+                await Task.Delay(1*1000, stoppingToken);
+                ConsumeMessage(_connection);
             }
         }
 
-        void ConsumeMessage()
+        void ConsumeMessage(IConnection connection)
         {
-            var factory = new ConnectionFactory
-            {
-                Uri = new Uri("amqp://guest:guest@localhost:5672")
-            };
-
-            using var connection = factory.CreateConnection();
             using var channel = connection.CreateModel();
-            channel.QueueDeclare("queue-person-service");
-
+            channel.QueueDeclare("queue-person-service",
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null);
+            
             var consumer = new EventingBasicConsumer(channel);
             consumer.Received += (sender, e) =>
             {
